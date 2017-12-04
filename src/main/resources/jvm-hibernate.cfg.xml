@@ -1,0 +1,23 @@
+<?xml version='1.0' encoding='utf-8'?>
+<!DOCTYPE hibernate-configuration PUBLIC
+          "-//Hibernate/Hibernate Configuration DTD 3.0//EN"
+          "http://www.hibernate.org/dtd/hibernate-configuration-3.0.dtd">
+
+<hibernate-configuration>
+	<session-factory>
+		<property name="connection.url">jdbc:oracle:thin:@localhost:1521/pdborcl.localhost.com</property>
+		<property name="connection.username">JVMDUMPS</property>
+		<property name="connection.password">JVMDUMPS</property>
+		<property name="connection.driver_class">oracle.jdbc.driver.OracleDriver</property>
+		<property name="dialect">org.hibernate.dialect.Oracle10gDialect</property>
+		<property name="show_sql">false</property>
+		<property name="max_fetch_depth">2</property>
+		<property name="format_sql">true</property>
+		<property name="hbm2ddl.auto">update</property>
+		<property name="default_batch_fetch_size">25</property>
+		<!-- JDBC connection pool (use the built-in) -->
+		<property name="connection.pool_size">1</property>
+		<property name="current_session_context_class">thread</property>
+		<mapping class="com.dumper.dao.ClobEntity" />		
+	</session-factory>
+</hibernate-configuration>

@@ -1,0 +1,97 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:faces="http://www.springframework.org/schema/faces"
+	xmlns:mvc="http://www.springframework.org/schema/mvc" xmlns:util="http://www.springframework.org/schema/util"
+	xmlns:aop="http://www.springframework.org/schema/aop" xmlns:jms="http://www.springframework.org/schema/jms"
+	xmlns:p="http://www.springframework.org/schema/p" xmlns:context="http://www.springframework.org/schema/context"
+	xmlns:jee="http://www.springframework.org/schema/jee" xmlns:tx="http://www.springframework.org/schema/tx"
+	xmlns:task="http://www.springframework.org/schema/task"
+	xsi:schemaLocation="
+           http://www.springframework.org/schema/beans
+           http://www.springframework.org/schema/beans/spring-beans.xsd
+		   http://www.springframework.org/schema/faces
+		   http://www.springframework.org/schema/faces/spring-faces.xsd
+		   http://www.springframework.org/schema/mvc
+		   http://www.springframework.org/schema/mvc/spring-mvc.xsd
+           http://www.springframework.org/schema/util 
+           http://www.springframework.org/schema/util/spring-util.xsd
+           http://www.springframework.org/schema/aop 
+		   http://www.springframework.org/schema/aop/spring-aop.xsd
+		   http://www.springframework.org/schema/jms
+		   http://www.springframework.org/schema/jms/spring-jms.xsd
+		   http://www.springframework.org/schema/context 
+		   http://www.springframework.org/schema/context/spring-context.xsd
+		   http://www.springframework.org/schema/jee 
+		   http://www.springframework.org/schema/jee/spring-jee.xsd 
+		   http://www.springframework.org/schema/tx 
+		   http://www.springframework.org/schema/tx/spring-tx.xsd 
+		   http://www.springframework.org/schema/task 
+		   http://www.springframework.org/schema/task/spring-task.xsd">
+
+	<!-- this configuration enables @Valid annotation -->
+	<mvc:annotation-driven />
+
+	<!-- mapping resurces (js, css) -->
+	<mvc:resources mapping="/**" location="classpath:/META-INF/resources/, /resources/" />
+
+	<!-- enabling customized messages configuration -->
+	<bean name="messageSource" class="org.springframework.context.support.ReloadableResourceBundleMessageSource">
+		<property name="basename">
+			<value>resources/ValidationMessages</value>
+		</property>
+	</bean>	
+	
+	<context:component-scan base-package="com.dumper.model" /> 
+
+	<bean id="propertyConfigurer" class="org.springframework.beans.factory.config.PropertyPlaceholderConfigurer">
+	  	<property name="order" value="100"/>
+	    <property name="ignoreResourceNotFound" value="true"/>
+	    <property name="ignoreUnresolvablePlaceholders" value="true"/>
+	    <property name="locations">
+	      <list>
+	        <value>classpath:values/dumperValues.properties</value>
+	      </list>
+	    </property>
+    </bean> 
+
+	<!-- thymeleaf configuration -->
+	<bean id="templateResolver" class="org.thymeleaf.spring4.templateresolver.SpringResourceTemplateResolver">
+		<property name="prefix" value="/" />
+		<property name="suffix" value=".html" />
+		<property name="templateMode" value="HTML5" />
+		<property name="cacheable" value="false" />
+	</bean>
+
+	<bean id="templateEngine" class="org.thymeleaf.spring4.SpringTemplateEngine">
+		<property name="templateResolver" ref="templateResolver" />
+	</bean>
+
+	<bean class="org.thymeleaf.spring4.view.ThymeleafViewResolver">
+		<property name="templateEngine" ref="templateEngine" />
+		<property name="characterEncoding" value="UTF-8" />
+		<property name="order" value="0" />
+	</bean>
+
+	<beans profile="dbprofile">
+
+		<!-- ehcache configuration -->
+		<bean id="cacheManager" class="org.springframework.cache.ehcache.EhCacheCacheManager" p:cache-manager-ref="ehcache" />
+		<bean id="ehcache" class="org.springframework.cache.ehcache.EhCacheManagerFactoryBean" p:config-location="/WEB-INF/ehcache.xml" />
+
+		<bean id="clobDao" class="com.dumper.dao.ClobJpaDao" />
+
+		<!-- registering ClobServiceImpl bean -->
+		<bean id="clobService" class="com.dumper.services.ClobServiceImpl">
+			<property name="clobDao" ref="clobDao" />
+		</bean>
+
+		<bean name="dumpController" id="dumpController" class="com.dumper.controller.DumpController">
+			<property name="clobService" ref="clobService" />
+		</bean>
+
+	</beans>
+		<beans profile="basicprofile">
+	   	<bean name="dumpController" id="dumpController" class="com.dumper.controller.DumpController"/>
+	</beans>
+
+</beans>

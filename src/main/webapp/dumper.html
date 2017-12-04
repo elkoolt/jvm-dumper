@@ -1,0 +1,460 @@
+<!DOCTYPE HTML>
+<html lang="en" xmlns="http://www.w3.org/1999/xhtml" xmlns:th="http://www.thymeleaf.org">
+<head>
+<link rel="stylesheet" href="bootstrap.min.css"></link>
+<link rel="stylesheet" href="jquery-ui.css"></link>
+<script type="text/javascript" src="jquery-1.11.3.min.js"></script>
+<script type="text/javascript" src="js.cookie.js"></script>
+<script type="text/javascript" src="jquery-ui.js"></script>
+
+<title>JVM memory and thread dumper</title>
+<style>
+body {
+	padding-top: 40px;
+	padding-bottom: 40px;
+	background-color: #eee;
+}
+
+table {
+	border-collapse: separate;
+	border-spacing: 0 0.5em;
+}
+
+td {
+	padding: 5px;
+}
+
+.explanation-section {
+    font-family:Arial, sans-serif;
+    font-size:0.85em;
+    color:#333;
+}
+
+.loading-image {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  z-index: 10;
+}
+
+.loader
+{
+    display: none;
+    width:200px;
+    height: 200px;
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    text-align:center;
+    margin-left: -50px;
+    margin-top: -100px;
+    z-index:2;
+    overflow: auto;
+}
+
+.overlay {
+    background-color: rgba(0, 0, 0, 0.8);
+    z-index: 999;
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    display: none;
+}
+
+.demoHeaders {
+	margin-top: 2em;
+}
+
+#dialog-link {
+	padding: .4em 1em .4em 20px;
+	position: relative;
+	text-decoration: none;
+}
+
+#dialog-link span.ui-icon {
+	left: .2em;
+	margin: 0 5px 0 0;
+	margin-top: -8px;
+	position: absolute;
+	top: 50%;
+}
+
+#icons {
+	margin: 0;
+	padding: 0;
+}
+
+#icons li {
+	cursor: pointer;
+	float: left;
+	list-style: none;
+	margin: 2px;
+	padding: 4px 0;
+	position: relative;
+}
+
+#icons span.ui-icon {
+	float: left;
+	margin: 0 4px;
+}
+
+.fakewindowcontain .ui-widget-overlay {
+	position: absolute;
+}
+
+select {
+	width: 200px;
+}
+
+.pre-threads {
+	font-size:11px; 
+	font-family: 'Courier New'';
+}
+
+.jvm_opts_labels {
+	font-size:12px; 
+	font-family: 'Courier New'; 
+	font-weight: bold;
+}
+
+.jvm_opts_values {
+	font-size:12px; 
+	font-family: 'Courier New';
+}
+
+.threads_timestamp {
+	font-size:11px; 
+	font-family: 'Courier New';
+}
+
+.threads_delete {
+	font-size:11px;
+	color:#333; 
+	font-weight: bold;
+}
+</style>
+</head>
+
+<body>
+
+	<div class="container">
+		<div class="well center-block" style="max-width: 1000px;">
+			 <form th:action="@{/resources/dumper}" th:object="${formData}" id="dumper-form" method="post" onsubmit="clearTabsAndButtons()">
+				<table>
+					<tr>
+						<td><label th:for="threadCount">Thread dumps amount:</label></td>
+						<td><input type="text" id="threadCount" name="threadCount" autocomplete="off" class="form-control" th:value="${@formData.getThreadCount()}"/></td>
+						<td class="threadCountError" th:if="${#fields.hasErrors('threadCount')}" th:errors="*{threadCount}">ThreadCount Error</td>
+					</tr>
+					<tr>
+						<td><label th:for="minDepth">Thread minimum depth to show:</label></td>
+						<td><input type="text" id="minDepth" name="minDepth" autocomplete="off" class="form-control" th:value="${@formData.getMinDepth()}"/>
+						<div class="explanation-section">"0" - means filtering by depth is disabled.</div></td>
+						<td class="minDepthError" th:if="${#fields.hasErrors('minDepth')}" th:errors="*{minDepth}">Depth Error</td>
+					</tr>
+					<tr>
+						<td><label th:for="filteringRegex">Threads filtering:</label></td>
+						<td><textarea rows="4" cols="50" id="filteringRegex" name="filteringRegex" class="form-control" style="font-size: 10pt;" th:inline="text">[[${@formData.getFilteringRegex()}]]</textarea>
+						<div class="explanation-section">"default" - means filter is disabled. Filter pattern "___, ___, ...."</div>
+						<label th:for="enabledLinesFiltering">Show only filtered lines</label>
+						<input type="checkbox" id="enabledLinesFiltering" name="enabledLinesFiltering" th:inline="text" th:checked="${@formData.isEnabledLinesFiltering()}"/></td>
+						<td class="filteringRegexError" th:if="${#fields.hasErrors('filteringRegex')}" th:errors="*{filteringRegex}">FilteringRegex Error</td>
+					</tr>
+					<tr>
+						<td><label th:for="threadStatesForm">Filtering by states:</label></td>
+						<td>
+						<select id="threadStatesForm" th:field="*{threadStatesForm}" multiple="multiple">
+							<option th:each="state : ${threadStates}" th:value="${{state}}" th:text="${state}"></option>
+						</select>
+						</td>
+					</tr>
+					<tr>
+						<td></td>
+						<td><label th:for="enabledHighlight">Enable text highlighting</label>
+						<input type="checkbox" id="enabledHighlight" name="enabledHighlight" th:inline="text" th:checked="${@formData.isEnabledHighlight()}"/>
+						<input type="text" id="textToHighlight" name="textToHighlight" autocomplete="off" class="form-control input-sm" th:value="${@formData.getTextToHighlight()}"/></td>
+						<td class="textToHighlightError" th:if="${#fields.hasErrors('textToHighlight')}" th:errors="*{textToHighlight}">TextToHighlight Error</td>
+					</tr>		
+					<tr>
+						<td></td>
+						<td><button type="submit" class="btn btn-primary btn-xl page-scroll" id="form-submit">Get Thread Dump</button> 
+						<a id="get-memory-dump" th:href="@{/resources/memory_dump}" class="btn btn-primary btn-xl page-scroll">Get Memory Dump</a>
+						<a id="jvm-opts" th:href="@{/resources/get_jvm_info}" class="btn btn-primary btn-xl page-scroll">JVM Details</a>
+						<a id="db-threads" th:if="${#arrays.contains(@environment.getActiveProfiles(),'dbprofile')}" class="btn btn-primary btn-xl page-scroll">Show threads stored in DB</a></td>
+						<td></td>
+					</tr>
+				</table>
+			</form>
+
+<div id="stuckThreads"></div>
+
+<div class="loader"><img class="loading-image" src="ajax.gif"/></div>
+<div class="overlay"></div>
+<div style="padding-top: 10px;">
+	<div id="threads-buttons-div"></div>
+	<div id="zipped-threads-download-link"></div>
+	<div id="tabs"></div>
+</div>
+<input id="guid-value" type="hidden" th:value="${guid}" />
+<!--  <input id="is-thread-present" type="hidden"  /> -->
+
+<script type="text/javascript" th:inline="javascript">
+//<![CDATA[
+//clears tabs and buttons content if submit was performed
+function clearTabsAndButtons() {
+	
+ // removes tabs
+ $("#tabs").empty();
+
+ // removes buttons
+ $("#threads-buttons-div").html("");
+ $("#zipped-threads-download-link").html("");
+ 
+ $("#tabs").tabs("destroy");
+}
+
+//ajax request for thread dumping 
+$(document).ready(function() {
+ $('#dumper-form').submit(function(e) {
+
+	 // removes button and db-threads-div if it is present
+     $("#threads-buttons-div").html("");
+     $("#db-threads-div").attr("style", "display:none;");
+     $("#jvm-opts-div").attr("style", "display:none");
+
+     var threadCount = $("input#threadCount").val();
+     var minDepth = $("input#minDepth").val();
+     var filteringRegex = $("textarea#filteringRegex").val().length;
+	 var isDBProfileEnabled = [[${#arrays.contains(@environment.getActiveProfiles(),'dbprofile')}]];
+     var isFilteringEnabled = $('#enabledHighlight').prop('checked');
+
+     if (isFilteringEnabled) {
+         if ($("input#textToHighlight").val().length <= 2) {
+             return;
+         }
+     }
+
+     if (threadCount >= 1 && filteringRegex >= 2 && minDepth != '') {
+
+         e.preventDefault();
+
+         var str = $("#dumper-form").serialize();
+
+         $("td.threadCountError").remove();
+         $("td.minDepthError").remove();
+         $("td.filteringRegexError").remove();
+         $("td.textToHighlightError").remove();
+
+         $.ajax({
+             beforeSend: function() {
+                 $('.overlay').show();
+                 $('.loader').show();
+             },
+             type: "POST",
+             url: $(this).attr('action'),
+             async: true,
+             dataType: "html",
+             data: str,
+             success: function(response) {
+
+                     if (threadCount == 1) {
+                         var threadDumpWithAmount = response.split('\",\"');
+                         var threadDump = threadDumpWithAmount[0].replace('[\"', '').replace('\"]', '').split('\\n').join('<br/>').split('\\"').join('"');
+                         var threadsAmount = threadDumpWithAmount[1].replace('[\"', '').replace('\"]', '').split('\\n').join('<br/>').split('\\"').join('"')
+
+                         var writeToDBButton = '';
+
+                         if (isDBProfileEnabled) {
+                             writeToDBButton = "<a class=\"btn btn-primary btn-xs\" href=\"write_to_db\" role=\"button\" style=\"margin-left: 5px;\">Write thread dump to database</a>";
+                         }
+
+                         $("#threads-buttons-div").html("<a class=\"btn btn-primary btn-xs\" href=\"get_one_thread_dump\" role=\"button\">Download thread dump</a>" + writeToDBButton + "<span class=\"bg-primary\" style=\"width:160px; margin-left: 5px;\">Total active threads: " + threadsAmount + "</span>");
+                         $("#tabs").html(threadDump);
+   
+                     } else {
+
+                         var htmlBuilder = [];
+                         var threadDumpArray = response.split('\",\"');
+                         
+                         var emptyString = "No matching has been found";
+
+                         if (threadDumpArray[0].includes(emptyString)) {
+                        	 $("#tabs").html(threadDumpArray[0].replace('[\"', '').replace(/[0-9]/g, '').replace('|', '').replace(/\\/g,''));
+                         }
+
+                         var stuckThreadsController = /*[[@{/resources/get_stuck_threads}]]*/ null;
+
+                         jQuery.getJSON(stuckThreadsController, function(data) {
+                        	 
+                             var stuckThreadDumpArray = data;
+                             var unescapedString = [];
+           
+                             if (stuckThreadDumpArray.length) {
+                            	 for (var i = 0; i < stuckThreadDumpArray.length; i++) {
+                            		 unescapedString.push(stuckThreadDumpArray[i].replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"').replace(/&#039;/g, "'"));
+                                 }
+                             }
+                         
+                             htmlBuilder.push("<ul>");
+
+                             var i = 0;
+                             for (i = 0; i < threadDumpArray.length; i++) {
+                                 htmlBuilder.push("<li><a href=\"#tabs-" + (i + 1) + "\">Thread[" + (i + 1) + "]</a></li>");
+                             }
+
+                             if (stuckThreadDumpArray.length) {
+                                 htmlBuilder.push("<li><a href=\"#tabs-" + (i + 2) + "\">Stuck threads</a></li>");
+                             }
+
+                             htmlBuilder.push("</ul>");
+
+                             for (var i = 0; i < threadDumpArray.length; i++) {
+                                 var threadDump = threadDumpArray[i].replace('[\"', '').replace('\"]', '').split('\\n').join('<br/>').split('\\"').join('"').split("|");
+                                 htmlBuilder.push("<div id=\"tabs-" + (i + 1) + "\"><span class=\"bg-primary\" style=\"width:160px; margin-left: 5px;\">Total active threads: " + threadDump[0] + "</span>" + threadDump[1] + "</div>");
+                             }
+
+                             if (stuckThreadDumpArray.length) {
+                                 htmlBuilder.push("<div id=\"tabs-" + (i + 2) + "\"><pre class=\"pre-threads\">" + unescapedString.join("\n") + "</pre>");
+                             }
+
+                             htmlBuilder.push("</div>");
+
+                             $("#zipped-threads-download-link").html("<a class=\"btn btn-primary btn-xs\" href=\"get_zipped_thread_dump\" role=\"button\">Download zipped thread dumps</a>");
+
+                             $("#tabs").html(htmlBuilder.join("")).tabs();
+                         });
+                     }
+             },
+             complete: function() {
+                 $('.overlay').hide();
+                 $('.loader').hide();
+             }
+         });
+     }
+ });
+
+ // request for memory dump
+ $("#get-memory-dump").click(function(e) {
+     e.preventDefault();
+
+     var guid = $('#guid-value').val();
+     var url = this.href + "?guid=" + guid;
+
+     $('.overlay').show();
+     $('.loader').show();
+
+     window.location.href = url;
+
+     UIBlocker();
+
+     var fileDownloadChecker;
+     //check every second if there is equal cookie from back-end, if yes - remove the ajax and shadow
+     function UIBlocker() {
+         fileDownloadChecker = window.setInterval(function() {
+             var cookieValue = $.cookie("guidcookie");
+             if (cookieValue == guid)
+                 finishDownload();
+         }, 1000);
+     }
+
+     function finishDownload() {
+         $('.overlay').hide();
+         $('.loader').hide();
+         window.clearInterval(fileDownloadChecker);
+         $.removeCookie("guidcookie");
+     }
+ });
+
+ // process show/hide request for thread-dumps from DB
+ $("#db-threads").click(function(e) {
+     e.preventDefault();
+
+     // removing attributes
+     $("#tabs").removeAttr("class");
+     $("#tabs").html("");
+     $("#threads-buttons-div").html("");
+     $("#zipped-threads-download-link").html("");
+     $("td.threadCountError").remove();
+     $("td.minDepthError").remove();
+     $("td.filteringRegexError").remove();
+
+     $("#jvm-opts-div").attr("style", "display:none");
+
+     // show threads from db
+     $("#db-threads-div").removeAttr("style");
+
+ });
+
+ // process show/hide request for JVM_OPTS
+ $("#jvm-opts").click(function(e) {
+     e.preventDefault();
+     
+     // removing attributes
+     $("#tabs").removeAttr("class");
+     $("#tabs").html("");
+     $("#threads-buttons-div").html("");
+     $("#zipped-threads-download-link").html("");
+     $("td.threadCountError").remove();
+     $("td.minDepthError").remove();
+     $("td.filteringRegexError").remove();
+
+     $("#db-threads-div").attr("style", "display:none");
+
+     // show jvm_opts
+     $("#jvm-opts-div").removeAttr("style");
+
+     var url = this.href
+ 
+     jQuery.getJSON(url, function(data) {
+    	 
+    	 var htmlBuilder = [];
+    	 htmlBuilder.push("<table class=\"table table-bordered\">");
+    	 
+    	 $.each(data, function(key, value){
+    		 htmlBuilder.push("<tr style=\"vertical-align:top\">" + 
+    				 "<td class=\"bg-info jvm_opts_labels\">" + key + "</td>" +
+    				 "<td class=\"bg-info jvm_opts_values\">" + value + "</td></tr>");
+    		});
+    	 
+    	 	htmlBuilder.push("</table>");
+    		 $("#jvm-opts-div").html(htmlBuilder.join(""));
+     });
+
+ });
+
+});
+//]]>
+</script>
+
+<div id="jvm-opts-div" style="display:none;"></div>
+</div>
+</div>
+
+
+<div th:if="${#arrays.contains(@environment.getActiveProfiles(),'dbprofile')}">
+<div id="db-threads-div" style="display:none;">
+<div th:if="${#lists.isEmpty(clobs)}">
+ <p>No records has been found in DB or no connection</p>
+</div>
+
+<div th:if="${not #lists.isEmpty(clobs)}">
+ <table class="table table-condensed">
+      <tr>
+        <th>Timestamp</th>
+        <th>Thread-dump</th>
+        <th></th>
+      </tr>
+      <tr style="vertical-align:top" th:each="clob : ${clobs}">
+        <td class="threads_timestamp" th:text="${#calendars.format(clob.createdOn, 'yyyy-MM-dd HH:mm:ss')}"></td>
+        <td th:inline="text"><pre class="pre-threads">[[${@clobService.getThreadDump(clob.id)}]]</pre></td>
+        <td><a class="threads_delete" data-th-href="@{/resources/delete(id=${clob.id})} ">Delete Record</a></td>
+      </tr>
+    </table>
+</div>
+</div>
+</div>
+
+</body>
+</html>
