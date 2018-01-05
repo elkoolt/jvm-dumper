@@ -93,8 +93,10 @@ public class DumpController {
 	 */
 	@RequestMapping(value = { "/dumper" }, method = { RequestMethod.POST })
 	public String validateFormData(@Valid @ModelAttribute(FORM_MODEL) FormData formData, BindingResult bindingResult,
-			RedirectAttributes redirectAttributes) {
+			RedirectAttributes redirectAttributes, Model model) {
 
+		model.addAttribute("threadStates", new ThreadStatesLookup().findAll());
+		
 		boolean isFailure = bindingResult.getFieldValue("enabledHighlight").toString().equals(Boolean.TRUE.toString())
 				&& bindingResult.getFieldValue("textToHighlight").toString().length() <= 2;
 

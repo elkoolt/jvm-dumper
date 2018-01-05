@@ -1,11 +1,11 @@
 <!DOCTYPE HTML>
 <html lang="en" xmlns="http://www.w3.org/1999/xhtml" xmlns:th="http://www.thymeleaf.org">
 <head>
-<link rel="stylesheet" href="bootstrap.min.css"></link>
-<link rel="stylesheet" href="jquery-ui.css"></link>
-<script type="text/javascript" src="jquery-1.11.3.min.js"></script>
-<script type="text/javascript" src="js.cookie.js"></script>
-<script type="text/javascript" src="jquery-ui.js"></script>
+<link rel="stylesheet" type="text/css" media="all" th:href="@{bootstrap.min.css}" />
+<link rel="stylesheet" type="text/css" media="all" th:href="@{jquery-ui.css}" />
+<script type="text/javascript" th:src="@{jquery-1.11.3.min.js}"></script>
+<script type="text/javascript" th:src="@{js.cookie.js}"></script>
+<script type="text/javascript" th:src="@{jquery-ui.js}"></script>
 
 <title>JVM memory and thread dumper</title>
 <style>
@@ -140,7 +140,7 @@ select {
 <body>
 
 	<div class="container">
-		<div class="well center-block" style="max-width: 1000px;">
+		<div class="well center-block" style="max-width: 1015px;">
 			 <form th:action="@{/resources/dumper}" th:object="${formData}" id="dumper-form" method="post" onsubmit="clearTabsAndButtons()">
 				<table>
 					<tr>
@@ -190,7 +190,7 @@ select {
 
 <div id="stuckThreads"></div>
 
-<div class="loader"><img class="loading-image" src="ajax.gif"/></div>
+<div class="loader"><img class="loading-image" th:src="@{ajax.gif}" /></div>
 <div class="overlay"></div>
 <div style="padding-top: 10px;">
 	<div id="threads-buttons-div"></div>
@@ -198,7 +198,6 @@ select {
 	<div id="tabs"></div>
 </div>
 <input id="guid-value" type="hidden" th:value="${guid}" />
-<!--  <input id="is-thread-present" type="hidden"  /> -->
 
 <script type="text/javascript" th:inline="javascript">
 //<![CDATA[
