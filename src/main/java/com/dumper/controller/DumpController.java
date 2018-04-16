@@ -214,6 +214,28 @@ public class DumpController {
 
 		return threadParams;
 	}
+	
+	/**
+	 * Plain thread dumping WS
+	 * 
+	 * @param response
+	 * @throws IOException
+	 */
+	@RequestMapping(value = { "/thread_dumpWS" }, method = { RequestMethod.GET }, produces = {
+	"application/txt" })
+	public void threadDumpWS(HttpServletResponse response) throws IOException {
+		response.setContentType("text/plain");
+		response.setStatus(HttpServletResponse.SC_OK);
+		response.setHeader("Content-Disposition", String.format("attachment; filename=\"%s.txt\"", THREAD_DUMP_NAME));
+		
+		String threadDump = ThreadDumper.getInstance().getThreadDump(0, "", false, false, "", new ArrayList<String>()).toString();
+		threadDump = Utils.removeHtmlTags(threadDump);
+		
+		InputStream inputStream = org.apache.commons.io.IOUtils.toInputStream(threadDump, "UTF-8");
+		IOUtils.copy(inputStream, response.getOutputStream());
+		response.flushBuffer();
+		IOUtils.closeQuietly(inputStream);
+	}
 
 	/**
 	 * Downloads thread dump in plain text

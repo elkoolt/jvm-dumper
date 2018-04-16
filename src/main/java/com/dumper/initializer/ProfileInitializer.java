@@ -31,7 +31,10 @@ public class ProfileInitializer implements WebApplicationInitializer {
 
 	final static Logger logger = Logger.getLogger(ProfileInitializer.class);
 
+	final private static String DEFAULT_PROFILE = "spring.profiles.default";
 	final private static String ACTIVE_PROFILE = "spring.profiles.active";
+	final private static String PROFILE_PROPERTY_DIR = "profile/profile.properties";
+	final private static String COMMA = ",";
 
 	@Override
 	public void onStartup(ServletContext servletContext) throws ServletException {
@@ -40,34 +43,42 @@ public class ProfileInitializer implements WebApplicationInitializer {
 		AnnotationConfigWebApplicationContext context = new AnnotationConfigWebApplicationContext();
 
 		try {
-			Resource resource = new ClassPathResource("profile/profile.properties");
+			Resource resource = new ClassPathResource(PROFILE_PROPERTY_DIR);
 			Properties props = PropertiesLoaderUtils.loadProperties(resource);
 
-			int i = 1;
+			// gets spring bean profile from spring.profiles.default (web.xml)
+			if (servletContext.getInitParameter(DEFAULT_PROFILE) != null) {
+				for (String defaultProfile : servletContext.getInitParameter(DEFAULT_PROFILE).split(COMMA)) {
+					profilesList.append(defaultProfile).append(COMMA);
+				}
+			}
+
+			// gets spring bean profile from spring.profiles.active (JAVA_OPTS for example)
 			for (String activeProfile : context.getEnvironment().getActiveProfiles()) {
-
-				profilesList.append(activeProfile);
-				if (i++ != context.getEnvironment().getActiveProfiles().length) {
-					profilesList.append(",");
+				if (!profilesList.toString().contains(activeProfile)) {
+					profilesList.append(activeProfile).append(COMMA);
 				}
 			}
 
+			// gets spring bean profile from property file
 			String propertyProfile = props.getProperty(ACTIVE_PROFILE);
-
-			if (StringUtils.hasLength(propertyProfile)) {
-				if (context.getEnvironment().getActiveProfiles().length > 0) {
-					profilesList.append(",");
-				}
-				profilesList.append(propertyProfile);
-				servletContext.setInitParameter(ACTIVE_PROFILE, profilesList.toString());
+			if (StringUtils.hasLength(propertyProfile) && !profilesList.toString().contains(propertyProfile)) {
+				profilesList.append(propertyProfile).append(COMMA);
 			}
+
+			// remove the last comma if present in a string
+			if (profilesList.lastIndexOf(COMMA) == profilesList.length() - 1) {
+				profilesList.deleteCharAt(profilesList.lastIndexOf(COMMA));
+			}
+
+			// set resolved spring profiles
+			servletContext.setInitParameter(ACTIVE_PROFILE, profilesList.toString());
 
 		} catch (IOException e) {
 			logger.error("Failed to load spring profile property", e);
 		} finally {
 			context.close();
 		}
-
 		logger.error("Using profiles " + profilesList);
 	}
 

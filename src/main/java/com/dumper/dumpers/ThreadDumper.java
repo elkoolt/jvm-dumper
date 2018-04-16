@@ -70,6 +70,9 @@ public class ThreadDumper {
 
 	/**
 	 * 
+	 * Thread dump getter with filtering
+	 * Call 'getThreadDump(0, "", false, false, "", new ArrayList<String>())' if no filteris is needed.
+	 * 
 	 * @param minDepth
 	 *            - depth enables then >=1
 	 * @param regex
@@ -88,8 +91,8 @@ public class ThreadDumper {
 		regex = getFilterRegexes(regex);
 		String textToHighlightArray[] = textToHighlight.replaceAll("\\s+", "").split(",");
 
-		StringBuilder dump = new StringBuilder();
-		StringBuilder tmp = new StringBuilder();
+		StringBuilder contentSb = new StringBuilder();
+		StringBuilder headerSb = new StringBuilder();
 		Set<Integer> threadNrWithPattern = new LinkedHashSet<Integer>();
 
 		ThreadMXBean threadMXBean = ManagementFactory.getThreadMXBean();
@@ -99,7 +102,7 @@ public class ThreadDumper {
 		boolean isRegexEnabled = !regex.equals(DEFAULT_REGEX) ? true : false;
 		int threadsCounter = 0;
 
-		dump.append("<pre class=\"pre-threads\">");
+		contentSb.append("<pre class=\"pre-threads\">");
 		boolean isThreadsFilteringEnabled = false;
 		// this part is used for marking threads with wanted filtering if regex
 		// is set and separate lines filtering is turned off
@@ -144,14 +147,14 @@ public class ThreadDumper {
 
 						if (i == 0) {
 
-							tmp.append('"');
-							tmp.append(threadInfo.getThreadName());
-							tmp.append("\" ");
-							tmp.append("\n   java.lang.Thread.State: ");
-							tmp.append(colorPicker(state));
+							headerSb.append('"');
+							headerSb.append(threadInfo.getThreadName());
+							headerSb.append("\" ");
+							headerSb.append("\n   java.lang.Thread.State: ");
+							headerSb.append(colorPicker(state));
 
 							if (threadInfo.getLockName() != null) {
-								tmp.append(" on " + threadInfo.getLockName());
+								headerSb.append(" on " + threadInfo.getLockName());
 							}
 						}
 
@@ -163,8 +166,8 @@ public class ThreadDumper {
 
 						isThereAnyContent = true;
 
-						dump.append(tmp);
-						dump.append("\n        at ");
+						contentSb.append(headerSb);
+						contentSb.append("\n        at ");
 
 						boolean colorTag = false;
 						boolean isAlreadyColored = false;
@@ -174,40 +177,40 @@ public class ThreadDumper {
 							colorTag = stackTraceElements[i].toString().toLowerCase().contains(toHighlight.toLowerCase()) && isHighlightEnabled ? true : false;
 
 							if (colorTag) {
-								dump.append("<b><font color=\"red\">" + stackTraceElements[i] + "</font></b>");
+								contentSb.append("<b><font color=\"red\">" + stackTraceElements[i] + "</font></b>");
 								isAlreadyColored = true;
 							}
 						}
 
 						if (!isAlreadyColored) {
-							dump.append(stackTraceElements[i]);
+							contentSb.append(stackTraceElements[i]);
 						}
 
-						tmp.setLength(0);
+						headerSb.setLength(0);
 					}
 				}
 
 				if (isThereAnyContent) {
-					dump.append("\n\n");
+					contentSb.append("\n\n");
 					isThereAnyContent = false;
 				}
 			}
 
-			tmp.setLength(0);
+			headerSb.setLength(0);
 		}
 
 		// sets generated threads amount
 		setThreadCount(threadInfos.length);
-		dump.append("</pre>");
+		contentSb.append("</pre>");
 
 		// if there are no content
-		if (dump.toString().equals("<pre class=\"pre-threads\"></pre>")) {
-			dump.setLength(0);
-			dump.append("<pre class=\"pre-threads\">No matching has been found</pre>");
+		if (contentSb.toString().equals("<pre class=\"pre-threads\"></pre>")) {
+			contentSb.setLength(0);
+			contentSb.append("<pre class=\"pre-threads\">No matching has been found</pre>");
 		}
-		return dump;
+		return contentSb;
 	}
-
+	
 	/**
 	 * Regex parser for threads filtering
 	 * 
