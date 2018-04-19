@@ -79,8 +79,7 @@ public class ProfileInitializer implements WebApplicationInitializer {
 		} finally {
 			context.close();
 		}
-		logger.error("Using profiles " + profilesList);
-		System.out.println(profilesList);
+		logger.error("Using profiles: " + profilesList);
 	}
 
 }
