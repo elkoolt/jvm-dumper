@@ -47,7 +47,7 @@ public class ProfileInitializer implements WebApplicationInitializer {
 			Properties props = PropertiesLoaderUtils.loadProperties(resource);
 
 			// gets spring bean profile from spring.profiles.default (web.xml)
-			if (servletContext.getInitParameter(DEFAULT_PROFILE) != null) {
+			if (context.getEnvironment().getActiveProfiles().length == 0  && servletContext.getInitParameter(DEFAULT_PROFILE) != null) {
 				for (String defaultProfile : servletContext.getInitParameter(DEFAULT_PROFILE).split(COMMA)) {
 					profilesList.append(defaultProfile).append(COMMA);
 				}
@@ -80,6 +80,7 @@ public class ProfileInitializer implements WebApplicationInitializer {
 			context.close();
 		}
 		logger.error("Using profiles " + profilesList);
+		System.out.println(profilesList);
 	}
 
 }
