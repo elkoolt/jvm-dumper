@@ -202,12 +202,20 @@ public class DumpController {
 		if (formData.getFilteringRegex().equals(DEFAULT)) {
 			formData.setFilteringRegex("");
 		}
-
-		String threadDump = threadDumper.getThreadDump(formData.getMinDepth(), formData.getFilteringRegex(),
-				formData.isEnabledLinesFiltering(), formData.isEnabledHighlight(), formData.getTextToHighlight(), formData.getThreadStatesForm())
-				.toString();
+		
+		String threadDump;
+		
+		threadDump = threadDumper.getThreadDump(formData.getMinDepth(), formData.getFilteringRegex(), formData.isEnabledLinesFiltering(), 
+				formData.isEnabledHighlight(), formData.getTextToHighlight(), formData.getThreadStatesForm()).toString();
+		
+		if (formData.isEnabledGrouping()) {
+			String escapedThreadDump = Utils.escapeHtml(Utils.removePreTags(threadDump));
+			threadDump = Utils.unescapeHtml(ThreadsAnalyzer.getInstance().getGroupedThreads(escapedThreadDump, 1));
+			threadDump = Utils.addPreTags(threadDump);
+		}
+		
 		threadDumper.setThreadOutput(threadDump);
-
+		
 		// store thread dump and thread count
 		List<String> threadParams = new ArrayList<String>(
 				Arrays.asList(threadDump, String.valueOf(threadDumper.getThreadCount())));
@@ -297,7 +305,7 @@ public class DumpController {
 
 		DelayedThreadDumpInitializer delayedThreadDumper = new DelayedThreadDumpInitializer(formData.getThreadCount(),
 				formData.getMinDepth(), formData.getFilteringRegex(), formData.isEnabledLinesFiltering(),
-				formData.isEnabledHighlight(), dumpDir, latch, formData.getTextToHighlight(), formData.getThreadStatesForm());
+				formData.isEnabledHighlight(), formData.isEnabledGrouping(), dumpDir, latch, formData.getTextToHighlight(), formData.getThreadStatesForm());
 		delayedThreadDumper.doThreadDumping();
 
 		try {

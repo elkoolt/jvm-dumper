@@ -176,7 +176,13 @@ select {
 						<input type="checkbox" id="enabledHighlight" name="enabledHighlight" th:inline="text" th:checked="${@formData.isEnabledHighlight()}"/>
 						<input type="text" id="textToHighlight" name="textToHighlight" autocomplete="off" class="form-control input-sm" th:value="${@formData.getTextToHighlight()}"/></td>
 						<td class="textToHighlightError" th:if="${#fields.hasErrors('textToHighlight')}" th:errors="*{textToHighlight}">TextToHighlight Error</td>
-					</tr>		
+					</tr>	
+					<tr>
+						<td><label th:for="threadGrouping">Group threads with the same stacktrace:</label></td>
+						<td>
+							<input type="checkbox" id="enabledGrouping" name="enabledGrouping" th:inline="text" th:checked="${@formData.isEnabledGrouping()}"/>
+						</td>
+					</tr>
 					<tr>
 						<td></td>
 						<td><button type="submit" class="btn btn-primary btn-xl page-scroll" id="form-submit">Get Thread Dump</button> 

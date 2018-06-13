@@ -109,6 +109,16 @@ public class Utils {
 	public static String escapeHtml(String html){
 		return StringEscapeUtils.escapeHtml4(html);
 	}
+	
+	/**
+	 * Unescape HTML
+	 * 
+	 * @param html
+	 * @return
+	 */
+	public static String unescapeHtml(String html) {
+		return StringEscapeUtils.unescapeHtml4(html);
+	}
 
 	/**
 	 * Returns current time stamp
@@ -120,6 +130,26 @@ public class Utils {
 		return c.getTime();
 	}
 
+	/**
+	 * Remove pre tags
+	 * 
+	 * @param threadDump
+	 * @return
+	 */
+	public static String removePreTags(String threadDump) {
+		return threadDump.replaceAll("<pre class=\"pre-threads\">", "").replaceAll("</pre>","");
+	}
+	
+	/**
+	 * Add pre tags
+	 * 
+	 * @param threadDump
+	 * @return
+	 */
+	public static String addPreTags(String threadDump) {
+		return "<pre class=\"pre-threads\">" + threadDump + "</pre>";
+	}
+	
 	/**
 	 * Writes thread dump into file
 	 * 

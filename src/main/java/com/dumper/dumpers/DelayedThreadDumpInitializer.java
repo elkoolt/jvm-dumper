@@ -9,6 +9,7 @@ import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 
 import com.dumper.utils.Utils;
+
 import com.google.common.collect.LinkedListMultimap;
 
 /**
@@ -30,13 +31,16 @@ public class DelayedThreadDumpInitializer {
 	private String regex;
 	private boolean isEnabledLinesFiltering; 
 	private boolean isEnabledHighlight;
+	private boolean isEnabledGrouping;
 	private String textToHighlight;
 	private List<String> threadStates;
 	private List<String> threadOutputArray = new LinkedList<String>();
+	private List<String> threadgroupedArray = new LinkedList<String>();
 	private LinkedListMultimap<String, String> threadParts = LinkedListMultimap.create();
 	private LinkedListMultimap<String, String> threadPartsByLine = LinkedListMultimap.create();
 
-	public DelayedThreadDumpInitializer(int threadCount, int minDepth, String regex, boolean isEnabledLinesFiltering, boolean isEnabledHighlight, String dir, CountDownLatch latch, String textToHighlight, List<String> threadStates) {
+
+	public DelayedThreadDumpInitializer(int threadCount, int minDepth, String regex, boolean isEnabledLinesFiltering, boolean isEnabledHighlight, boolean isEnabledGrouping, String dir, CountDownLatch latch, String textToHighlight, List<String> threadStates) {
 		this.threadCount = threadCount;
 		this.dir = dir;
 		this.latch = latch;
@@ -44,8 +48,10 @@ public class DelayedThreadDumpInitializer {
 		this.regex = regex;
 		this.isEnabledLinesFiltering = isEnabledLinesFiltering;
 		this.isEnabledHighlight = isEnabledHighlight;
+		this.isEnabledGrouping = isEnabledGrouping;
 		this.textToHighlight = textToHighlight;
 		this.threadStates = threadStates;
+		
 		if (threadCount != 1) {
 			time = 5 * (threadCount - 1);
 		}
@@ -64,7 +70,7 @@ public class DelayedThreadDumpInitializer {
 	
 				String cleanedThreadDump = Utils.removeHtmlTags(threadDump);
 
-				String escapedThreadDump = Utils.escapeHtml(threadDump.replaceAll("<pre class=\"pre-threads\">", "").replaceAll("</pre>",""));
+				String escapedThreadDump = Utils.escapeHtml(Utils.removePreTags(threadDump));
 	
 				Utils.writeThreadDumpToFile(fileName, cleanedThreadDump);
 				// writes threads count and dump to array
@@ -73,20 +79,28 @@ public class DelayedThreadDumpInitializer {
 				threadParts.putAll(threadsAnalyzer.getThreadParts(escapedThreadDump));
 				// stores parsed threads parts: thread name/full stack by line 
 				threadPartsByLine.putAll(threadsAnalyzer.getThreadPartsByLine(escapedThreadDump));
+				// stores grouped thread dump
+				threadgroupedArray.add(String.format("%s|%s", threadDumper.getThreadCount(), Utils.addPreTags(Utils.unescapeHtml(threadsAnalyzer.getGroupedThreads(escapedThreadDump, i)))));
 			}
 		};
 		
 		final ScheduledFuture<?> handler = scheduler.scheduleAtFixedRate(run, 0, 5, TimeUnit.SECONDS);
 		scheduler.schedule(new Runnable() {
 			public void run() {
+				if(!isEnabledGrouping) {
+				// stores thread dumps. it is used in DumpController#thread_dump_list
 				threadDumper.setThreadOutputArray(threadOutputArray);
+				} else {
+					threadDumper.setThreadOutputArray(threadgroupedArray);
+				}
 				
 				if(threadCount >= 2) {
 					for(int i = threadCount; i !=1; i--) {
+						// stores stuck threads. it is used in DumpController#get_stuck_threads
 						threadsAnalyzer.setStuckThreads(ThreadsAnalyzer.getInstance().getStuckThreads(threadParts, threadPartsByLine, i));
 					}
 				}
-				
+
 				handler.cancel(true);
 				scheduler.shutdown();
 				latch.countDown();

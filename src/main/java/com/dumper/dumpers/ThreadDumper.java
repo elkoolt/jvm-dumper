@@ -177,12 +177,14 @@ public class ThreadDumper {
 							colorTag = stackTraceElements[i].toString().toLowerCase().contains(toHighlight.toLowerCase()) && isHighlightEnabled ? true : false;
 
 							if (colorTag) {
+								// writes colored stackTrace line
 								contentSb.append("<b><font color=\"red\">" + stackTraceElements[i] + "</font></b>");
 								isAlreadyColored = true;
 							}
 						}
 
 						if (!isAlreadyColored) {
+							// writes stackTrace line
 							contentSb.append(stackTraceElements[i]);
 						}
 

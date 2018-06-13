@@ -3,10 +3,13 @@ package com.dumper.dumpers;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.Iterator;
 import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
+import java.util.Map.Entry;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -181,4 +184,42 @@ public class ThreadsAnalyzer {
 		return dublicateThreads;
 	}
 
+	public String getGroupedThreads(String escapedThreadDump, int threadNumber) {
+
+		Map<String, LinkedListMultimap<String, String>> sameStackMap = new HashMap<String, LinkedListMultimap<String, String>>();
+
+		LinkedListMultimap<String, String> threadParts = LinkedListMultimap.create();
+		threadParts.putAll(getThreadParts(escapedThreadDump));
+
+		LinkedListMultimap<String, String> multimapByStackTrace = LinkedListMultimap.create();
+
+		StringBuilder groupedThread = new StringBuilder();
+
+		// put thread into full stack/thread name map
+		for (Entry<String, String> entry : threadParts.entries()) {
+			multimapByStackTrace.put(entry.getValue(), entry.getKey());
+		}
+
+		sameStackMap.put(Integer.toString(threadNumber), multimapByStackTrace);
+
+		for (Map.Entry<String, LinkedListMultimap<String, String>> multimapByStackTraces : sameStackMap.entrySet()) {
+			LinkedListMultimap<String, String> value = multimapByStackTraces.getValue();
+
+			for (String stackTrace : value.asMap().keySet()) {
+
+				Collection<String> threadNames = value.get(stackTrace);
+
+				StringBuilder threadNameStb = new StringBuilder();
+				for (String threadName : threadNames) {
+					threadNameStb.append(threadName).append("\n");
+				}
+
+				groupedThread.append(threadNameStb);
+				groupedThread.append(stackTrace).append("\n");
+				threadNameStb.setLength(0);
+			}
+
+		}
+		return groupedThread.toString();
+	}
 }

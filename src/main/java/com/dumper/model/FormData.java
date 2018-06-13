@@ -37,6 +37,9 @@ public class FormData {
 	@Value("${enabledHighlight}")
 	private boolean enabledHighlight;
 	
+	@Value("${enabledGrouping}")
+	private boolean enabledGrouping;
+	
 	@Value("${enabledLinesFiltering}")
 	private boolean enabledLinesFiltering;
 
@@ -84,6 +87,14 @@ public class FormData {
 
 	public void setEnabledHighlight(boolean enabledHighlight) {
 		this.enabledHighlight = enabledHighlight;
+	}
+
+	public boolean isEnabledGrouping() {
+		return enabledGrouping;
+	}
+
+	public void setEnabledGrouping(boolean enabledGrouping) {
+		this.enabledGrouping = enabledGrouping;
 	}
 
 	public String getTextToHighlight() {
